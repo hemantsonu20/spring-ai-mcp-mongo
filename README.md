@@ -135,7 +135,10 @@ curl --location 'http://localhost:8082/query' \
 
 ```
 {
-    "response": "Here are the people older than 44 years old:\n\n- Andrew U Lewis, age 45, living at 999 Hickory Ln, Dallas, TX, 75202\n- Henry K Ward, age 45, living at 5100 Linden Ave, Fort Worth, TX, 76106"
+    "response": Here are the people who are older than 44 years old that I found:
+
+* Andrew U Lewis, age 45, living at 999 Hickory Ln, Dallas, TX, zip code 75202.
+* Henry K Ward, age 45, living at 5100 Linden Ave, Fort Worth, TX, zip code 76106.
 }
 ```
 
