@@ -1,0 +1,21 @@
+spring:
+  main:
+    web-application-type: servlet
+  mvc:
+    log-request-details: true
+    log-resolved-exception: true
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/mcpdb
+
+  ai:
+    mcp:
+      server:
+        enabled: true
+        stdio: false
+
+logging:
+  level:
+    org.springframework.ai: DEBUG
+    org.springframework.web: DEBUG
+    io.modelcontextprotocol: DEBUG

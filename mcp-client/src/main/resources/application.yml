@@ -1,0 +1,23 @@
+spring:
+  mvc:
+    log-request-details: true
+    log-resolved-exception: true
+  ai:
+    mcp:
+      client:
+        sse:
+          connections:
+            mcp-server:
+              url: http://localhost:8080
+    ollama:
+      base-url: http://localhost:11434
+
+
+logging:
+  level:
+    org.springframework.ai: DEBUG
+    org.springframework.web: DEBUG
+    io.modelcontextprotocol: DEBUG
+
+server:
+  port: 8082
