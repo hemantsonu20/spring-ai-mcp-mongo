@@ -1,10 +1,12 @@
 # spring-ai-mcp-mongo
 
-A full-stack AI-powered query system using Spring Boot, MongoDB, and Ollama LLM. The system consists of two main components:
+A full-stack AI-powered query system using Spring Boot, MongoDB, and AI Language Models (Ollama or OpenAI). The system consists of two main components:
 
-- **mcp-client**: REST API client for user queries. Interacts with both Ollama (for LLM responses) and mcp-server (for structured data queries).
+- **mcp-client**: REST API client for user queries. Supports both Ollama (local) and OpenAI (cloud) providers for LLM responses, and communicates with mcp-server for structured data queries.
 - **mcp-server**: Provides tools (APIs) to find details related to people. Queries person data from MongoDB.
-- **Ollama**: Local LLM server for natural language processing.
+- **AI Providers**:
+  - **Ollama** (default): Local LLM server for natural language processing. Free and runs locally.
+  - **OpenAI**: Cloud-based AI service with GPT models. Requires API key.
 - **MongoDB**: Stores person data in a `person` collection.
 
 
@@ -14,7 +16,7 @@ A full-stack AI-powered query system using Spring Boot, MongoDB, and Ollama LLM.
 sequenceDiagram
     participant User
     participant Client as mcp-client
-    participant LLM as Ollama
+    participant LLM as AI Provider<br/>(Ollama/OpenAI)
     participant Server as mcp-server
     participant DB as MongoDB
 
@@ -41,9 +43,9 @@ sequenceDiagram
 3. **Server returns list of MCP Tools as JSON:**
    - mcp-server responds with a JSON list describing available tools and their capabilities.
 4. **Client sends request with User Query + MCP Tools to LLM:**
-   - mcp-client sends the user query and the list of tools to Ollama (LLM) for reasoning and planning.
+   - mcp-client sends the user query and the list of tools to the selected AI provider (Ollama or OpenAI) for reasoning and planning.
 5. **LLM responds with Tool calls (if needed):**
-   - Ollama analyzes the query and tools, and may respond with instructions to call a specific tool (API) on mcp-server.
+   - The AI provider analyzes the query and tools, and may respond with instructions to call a specific tool (API) on mcp-server.
 6. **Client requests Server to Execute Tool (if needed):**
    - mcp-client sends a request to mcp-server to execute the required tool (e.g., findPeopleOlderThan(age=44)).
 7. **Server queries person collection in DB:**
@@ -53,9 +55,9 @@ sequenceDiagram
 9. **Server returns Tool Execution Result as JSON:**
    - mcp-server sends the tool execution result back to mcp-client.
 10. **Client sends final prompt with Tool Execution Result to LLM:**
-    - mcp-client sends the tool result and original query to Ollama for final natural language response generation.
+    - mcp-client sends the tool result and original query to the AI provider for final natural language response generation.
 11. **LLM returns NLP Based Response:**
-    - Ollama generates a user-friendly, natural language answer based on the data and returns it to mcp-client.
+    - The AI provider generates a user-friendly, natural language answer based on the data and returns it to mcp-client.
 12. **Client returns final answer as Text to User:**
     - mcp-client sends the final answer back to the user.
 
@@ -75,6 +77,63 @@ Each document in the `person` collection has the following structure:
   "state": "string",
   "zipCode": "string"
 }
+```
+
+## AI Provider Configuration
+
+The mcp-client supports two AI providers:
+
+### Ollama (Default)
+- **Local, Free**: Runs on your machine
+- **Model**: llama3.2 (configured for tool calling support)
+- **Setup**: Automatically started via Docker Compose
+- **No API key required**
+
+### OpenAI
+- **Cloud-based**: Requires internet connection
+- **Model**: gpt-4o-mini (configured)
+- **Setup**: Requires API key
+- **Set environment variable**:
+  ```bash
+  export OPENAI_API_KEY=your-api-key-here
+  ```
+
+### Selecting Provider at Runtime
+
+By default, all queries use **Ollama**. To use OpenAI, add `"provider": "openai"` to your request:
+
+**Using Ollama (default):**
+```json
+{
+  "query": "Find all people older than age 44"
+}
+```
+
+**Using OpenAI:**
+```json
+{
+  "query": "Find all people older than age 44",
+  "provider": "openai"
+}
+```
+
+### Supported Ollama Models for Tool Calling
+
+The following Ollama models support function/tool calling:
+- ✅ **llama3.2** (3B, 1B) - Default, good balance
+- ✅ **llama3.1** (8B, 70B) - Excellent function calling
+- ✅ **qwen2.5** (7B+) - Very good support
+- ✅ **mistral-nemo** (12B) - Good support
+- ❌ **mistral:7b** - Limited/no support
+
+To use a different model, update `mcp-client/src/main/resources/application.yml`:
+```yaml
+spring:
+  ai:
+    ollama:
+      chat:
+        options:
+          model: llama3.1  # Change model here
 ```
 
 ## Development
@@ -107,6 +166,11 @@ docker compose up -d
 ```sh
 ./mvnw spring-boot:run -pl mcp-client
 ```
+  > **Note**: To use OpenAI provider, set the `OPENAI_API_KEY` environment variable before running mcp-client:
+  > ```sh
+  > export OPENAI_API_KEY=your-api-key-here
+  > ./mvnw spring-boot:run -pl mcp-client
+  > ```
 
 ### Build and Run (All Services in Docker)
 ```sh
@@ -121,7 +185,9 @@ npx @modelcontextprotocol/inspector java -jar  mcp-server/target/mcp-server-1.0.
 ```
 
 ## Examples
-Send a query to the client API:
+
+### Query with Ollama (Default)
+Send a query using the default Ollama provider:
 ```sh
 curl --location 'http://localhost:8082/query' \
 --header 'Content-Type: application/json; charset=UTF-8' \
@@ -131,14 +197,52 @@ curl --location 'http://localhost:8082/query' \
 }'
 ```
 
-**Sample Response:**
-
+### Query with OpenAI
+Send a query using the OpenAI provider:
+```sh
+curl --location 'http://localhost:8082/query' \
+--header 'Content-Type: application/json; charset=UTF-8' \
+--header 'Accept: */*' \
+--data '{
+    "query": "Find all people older than age 44",
+    "provider": "openai"
+}'
 ```
-{
-    "response": Here are the people who are older than 44 years old that I found:
 
-* Andrew U Lewis, age 45, living at 999 Hickory Ln, Dallas, TX, zip code 75202.
-* Henry K Ward, age 45, living at 5100 Linden Ave, Fort Worth, TX, zip code 76106.
+**Sample Response:**
+```json
+{
+    "response": "Here are the people who are older than 44 years old that I found:\n\n* Andrew U Lewis, age 45, living at 999 Hickory Ln, Dallas, TX, zip code 75202.\n* Henry K Ward, age 45, living at 5100 Linden Ave, Fort Worth, TX, zip code 76106."
+}
+```
+
+### More Example Queries
+
+**Find people by city:**
+```json
+{
+    "query": "Who lives in Dallas?"
+}
+```
+
+**Find people by state:**
+```json
+{
+    "query": "Show me all people from Texas"
+}
+```
+
+**Find people in age range:**
+```json
+{
+    "query": "Find people between 30 and 40 years old"
+}
+```
+
+**Find by last name:**
+```json
+{
+    "query": "Find all people with last name Smith"
 }
 ```
 
